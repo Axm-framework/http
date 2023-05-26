@@ -3,7 +3,7 @@
 namespace Axm\Http;
 
 use Axm;
-use Axm\Core\Application;
+use Axm\Application;
 use Axm\Http\Request;
 use Axm\Http\Response;
 use Axm\Middlewares\BaseMiddleware;
@@ -20,7 +20,6 @@ class Router
     private static $request;
     private static $response;
     private static array $routeMap = [];
-    private static ?array $routeCache = null;
     private static $callback;
     private static $uri;
     private static $method;
@@ -265,11 +264,9 @@ class Router
     private static function notRouteRegistered()
     {
 
-        statusCode(404);
         if (static::$app->isProduction()) {
             $nameView = static::$app->config()->get('errorPages.404');
-
-            return show(static::renderViewOnly($nameView));
+            return static::$response->output(static::renderViewOnly($nameView), 404);
         }
 
         throw new AxmException(
@@ -353,51 +350,3 @@ class Router
         return $controller->renderView($viewFile);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // private function invoke($handler, $params = [])
-    // {
-
-    //     if (is_callable($handler)) {
-    //         return call_user_func_array(
-    //             $handler,
-    //             $params
-    //         );
-    //     } elseif (is_string($handler)) {
-    //         return Axm::app()->controller->renderViewOnly($handler);
-    //     }
-
-    //     // If not, check the existence of special parameters
-    //     elseif (stripos($handler, '@') !== false) {
-    //         list($controller, $method) = explode('@', $handler);
-
-    //         if (!class_exists($controller)) {
-    //             trigger_error("$controller not found. Cross-check the namespace if you're sure the file exists");
-    //         }
-
-    //         if (!method_exists($controller, $method)) {
-    //             trigger_error("$method method not found in $controller");
-    //         }
-
-    //         // First check if is a static method, directly trying to invoke it.
-    //         // If isn't a valid static method, we will try as a normal method invocation.
-    //         if (call_user_func_array([new $controller(), $method], $params) === false) {
-    //             // Try to call the method as a non-static method. (the if does nothing, only avoids the notice)
-    //             if (forward_static_call_array([$controller, $method], $params) === false);
-    //         }
-    //     }
-
-    // }

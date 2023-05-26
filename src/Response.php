@@ -18,7 +18,6 @@ class Response
   const EVENT_AFTER_REDIRECT  = 'afterRedirect';
 
   private $_httpVersion;
-  private $message;
   private $cyclic = 0;
 
   /**
@@ -80,13 +79,17 @@ class Response
     505 => 'HTTP Version Not Supported',
   ];
 
-
+  /**
+   * 
+   */
   public function getStatusCode()
   {
     return http_response_code();
   }
 
-
+  /**
+   * 
+   */
   public function setStatusCode(int $code, $message = null)
   {
     http_response_code($code);
@@ -97,22 +100,27 @@ class Response
     return $this->message = $message;
   }
 
-
+  /**
+   * 
+   */
   public function reload()
   {
     echo '<script> location.reload();</script>';
     exit;
   }
 
-
+  /**
+   * 
+   */
   public function back(int $pos = 1)
   {
     echo '<script>history.go(-' . $pos . ');</script>';
     exit;
   }
 
-
-
+  /**
+   * 
+   */
   private function redirector($page = null, $maxRedirects = 100)
   {
     if (is_null($page)) {
@@ -131,12 +139,15 @@ class Response
     header("Location: $page");
   }
 
-
+  /**
+   * 
+   */
   public function redirect($page = null)
   {
-    Axm::app()->event()->triggerEvent(self::EVENT_BEFORE_REDIRECT);
+    $event = Axm::app()->event();
+    $event->triggerEvent(self::EVENT_BEFORE_REDIRECT);
     $this->redirector(go($page));
-    Axm::app()->event()->triggerEvent(self::EVENT_AFTER_REDIRECT);
+    $event->triggerEvent(self::EVENT_AFTER_REDIRECT);
   }
 
 
@@ -168,7 +179,6 @@ class Response
     return (array) json_decode($content);
   }
 
-
   /**
    * Get our HTTP 1.1 message from our passed code
    *
@@ -178,7 +188,7 @@ class Response
    * @param int $int
    * @return string|null
    */
-  public static function getMessageFromCode($int)
+  public function getMessageFromCode($int)
   {
     if (isset(static::$http_messages[$int]))
       return static::$http_messages[$int];
@@ -201,6 +211,7 @@ class Response
       else
         $this->_httpVersion = '1.1';
     }
+
     return $this->_httpVersion;
   }
 
@@ -220,7 +231,7 @@ class Response
     http_response_code($code);
     \header(sprintf('Content-Type: %s;charset=%s', $mimeType, $charset));
 
-    return print $content;
+    return show($content);
   }
 
 
@@ -236,6 +247,7 @@ class Response
     if ($statusCode < 100 || $statusCode > 599) {
       throw new AxmException('Código de estado HTTP inválido');
     }
+
     http_response_code($statusCode);
 
     // Validamos y establecemos los headers
