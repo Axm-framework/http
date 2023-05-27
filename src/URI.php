@@ -127,69 +127,19 @@ abstract class URI
     protected $uri;
 
     /**
-     * 
-     */
-    private $pathClearUriLength;
-
-    /**
      * Returns the cleaned and formatted URI for the current request.
      * 
      * @return string The cleaned and formatted URI for the current request.
      */
-    // public function getUri(): ?string
-    // {
-    //     $path             = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-    //     $this->cleanedUri = filter_var($path, FILTER_SANITIZE_URL);
-    //     $baseUri          = str_replace(PATH_CLEAR_URI, '', $this->cleanedUri);
-    //     $formattedUri     = '/' . trim($baseUri, '/');
-
-    //     // Validación adicional para asegurarse de que la URI sea segura
-    //     $formattedUri     = preg_replace('/[^a-zA-Z0-9\/\-\_\.\~]/', '', $formattedUri);
-    //     $queryStringStart = strpos($formattedUri, '?');
-
-    //     if ($queryStringStart !== false) {
-    //         $formattedUri = substr($formattedUri, 0, $queryStringStart);
-    //     }
-
-    //     return $formattedUri;
-    // }
-
-    /**
-     * Define the current relative URI.
-     *
-     * @return string
-     */
     public function getUri(): ?string
     {
-
-        // Get the current Request URI and remove rewrite base path from it
-        $uri = substr(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), $this->pathClearUriLength());
+        $uri = str_replace(PATH_CLEAR_URI, '', rawurldecode($_SERVER['REQUEST_URI']));
 
         if (strstr($uri, '?')) {
             $uri = substr($uri, 0, strpos($uri, '?'));
         }
 
         return '/' . trim($uri, '/');
-    }
-
-
-    /**
-     * Devuelve e argo de PATH_CLEAR_URI
-     */
-    private function pathClearUriLength()
-    {
-        return $this->pathClearUriLength ??= strlen(PATH_CLEAR_URI);
-    }
-
-
-    /**
-     * Obtiene la Uri string.
-     *
-     * @return string $uriString
-     */
-    public function getUriString(): ?string
-    {
-        return $this->cleanedUri;
     }
 
 
@@ -214,11 +164,6 @@ abstract class URI
     /**
      * Used when resolving and merging paths to correctly interpret and
      * remove single and double dot segments from the path per
-     * RFC 3986 Section 5.2.4
-     *
-     * @see http://tools.ietf.org/html/rfc3986#section-5.2.4
-     *
-     * @internal
      */
     protected static function removeDotSegments(string $path): string
     {
@@ -268,14 +213,6 @@ abstract class URI
      *
      * If no scheme is present, this method MUST return an empty string.
      *
-     * The value returned MUST be normalized to lowercase, per RFC 3986
-     * Section 3.1.
-     *
-     * The trailing ":" character is not part of the scheme and MUST NOT be
-     * added.
-     *
-     * @see    https://tools.ietf.org/html/rfc3986#section-3.1
-     *
      * @return string The URI scheme.
      */
     public function getScheme(): string
@@ -295,18 +232,6 @@ abstract class URI
      * If no authority information is present, this method MUST return an empty
      * string.
      *
-     * The authority syntax of the URI is:
-     *
-     * <pre>
-     * [user-info@]host[:port]
-     * </pre>
-     *
-     * If the port component is not set or is the standard port for the current
-     * scheme, it SHOULD NOT be included.
-     *
-     * @see https://tools.ietf.org/html/rfc3986#section-3.2
-     *
-     * @return string The URI authority, in "[user-info@]host[:port]" format.
      */
     protected function getAuthority(bool $ignorePort = false): string
     {
@@ -328,22 +253,6 @@ abstract class URI
     /**
      * Retrieve the user information component of the URI.
      *
-     * If no user information is present, this method MUST return an empty
-     * string.
-     *
-     * If a user is present in the URI, this will return that value;
-     * additionally, if the password is also present, it will be appended to the
-     * user value, with a colon (":") separating the values.
-     *
-     * NOTE that be default, the password, if available, will NOT be shown
-     * as a security measure as discussed in RFC 3986, Section 7.5. If you know
-     * the password is not a security issue, you can force it to be shown
-     * with $this->showPassword();
-     *
-     * The trailing "@" character is not part of the user information and MUST
-     * NOT be added.
-     *
-     * @return string|null The URI user information, in "username[:password]" format.
      */
     protected function getUserInfo()
     {
@@ -354,8 +263,6 @@ abstract class URI
 
         return $userInfo;
     }
-
-
 
     /**
      * Temporarily sets the URI to show a password in userInfo. Will
@@ -376,33 +283,16 @@ abstract class URI
      *
      * If no host is present, this method MUST return an empty string.
      *
-     * The value returned MUST be normalized to lowercase, per RFC 3986
-     * Section 3.2.2.
-     *
-     * @see    http://tools.ietf.org/html/rfc3986#section-3.2.2
-     *
      * @return string The URI host.
      */
     protected function getHost(): string
     {
-        return $this->host ?? $_SERVER["HTTP_HOST"];
+        return $this->host ?? $_SERVER['HTTP_HOST'];
     }
 
 
     /**
      * Retrieve the port component of the URI.
-     *
-     * If a port is present, and it is non-standard for the current scheme,
-     * this method MUST return it as an integer. If the port is the standard port
-     * used with the current scheme, this method SHOULD return null.
-     *
-     * If no port is present, and no scheme is present, this method MUST return
-     * a null value.
-     *
-     * If no port is present, but a scheme is present, this method MAY return
-     * the standard port for that scheme, but SHOULD return null.
-     *
-     * @return int|null The URI port.
      */
     protected function getPort()
     {
@@ -499,11 +389,6 @@ abstract class URI
     /**
      * Returns the value of a specific segment of the URI path.
      *
-     * @param int    $number  Segment number
-     * @param string $default Default value
-     *
-     * @return string The value of the segment. If no segment is found,
-     *                throws InvalidArgumentError
      */
     protected function getSegment(int $number, string $default = ''): string
     {
@@ -512,7 +397,7 @@ abstract class URI
         $number--;
 
         if ($number > count($this->segments) && !$this->silent)
-            throw new AxmException("segmento fuera de rango $number");
+            throw new AxmException("Segmento fuera de rango $number");
 
         return $this->segments[$number] ?? $default;
     }
@@ -529,10 +414,10 @@ abstract class URI
 
     protected function createNewUrl(string $uri): string
     {
-        $scheme = $this->getScheme();
+        $scheme    = $this->getScheme();
         $authority = $this->getAuthority();
-        $query = $this->getQuery();
-        $fragment = $this->getFragment();
+        $query     = $this->getQuery();
+        $fragment  = $this->getFragment();
 
         return static::createURIString($scheme, $authority, $uri, $query, $fragment);
     }
@@ -540,11 +425,11 @@ abstract class URI
 
     protected function getUrl(): string
     {
-        $scheme = $this->getScheme();
-        $authority = $this->getAuthority();
+        $scheme     = $this->getScheme();
+        $authority  = $this->getAuthority();
         $cleanedUri = $this->cleanedUri ?? '';
-        $query = $this->getQuery();
-        $fragment = $this->getFragment();
+        $query      = $this->getQuery();
+        $fragment   = $this->getFragment();
 
         return static::createURIString($scheme, $authority, $cleanedUri, $query, $fragment);
     }
