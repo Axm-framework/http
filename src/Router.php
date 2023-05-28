@@ -191,7 +191,7 @@ class Router
      * @param array $middlewares 
      * @return callback
      * */
-    public static function getMiddlewares(array $middlewares)
+    private static function getMiddlewares(array $middlewares)
     {
         foreach ($middlewares as $middleware)
             return $middleware->execute();      //ejecuta el metodo por defecto execute
@@ -203,12 +203,16 @@ class Router
      * @param array $actions
      * @param bool  $allowedAction
      */
-    public static function addMiddleware(BaseMiddleware $middleware): void
+    public static function middleware($middleware = null)
     {
-        static::$app->controller->middlewares[] = function () use ($middleware) {
-            return new $middleware;
-        };
+        if (!is_null($middleware)) {
+            # registrar middleware in controller
+            Axm::app()->controller->registerMiddleware(new $middleware);
+        }
+
+        return static::class;
     }
+
 
     /**
      * 
@@ -266,7 +270,7 @@ class Router
 
         if (static::$app->isProduction()) {
             $nameView = static::$app->config()->get('errorPages.404');
-            return static::$response->output(static::renderViewOnly($nameView), 404);
+            return static::$response->send(static::renderViewOnly($nameView), 404);
         }
 
         throw new AxmException(

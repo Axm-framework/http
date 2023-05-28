@@ -155,7 +155,7 @@ class Response
   /**
    * Outputs the given content encoded as JSON string.
    */
-  public function outJson($content, int $code = 200, string $charset = 'utf-8')
+  public static function json(array $content, int $code = 200, string $charset = 'utf-8')
   {
     /*mime type para el contenido*/
     http_response_code($code);
@@ -226,7 +226,7 @@ class Response
    *
    * @return int Returns 1, always
    */
-  public function output(string $content = '', int $code = 204, string $mimeType = 'text/plain', string $charset = 'utf-8'): int
+  public function send(string $content = '', int $code = 204, string $mimeType = 'text/plain', string $charset = 'utf-8'): int
   {
     http_response_code($code);
     \header(sprintf('Content-Type: %s;charset=%s', $mimeType, $charset));
