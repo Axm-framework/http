@@ -5,7 +5,6 @@ namespace Axm\Http;
 use Axm;
 use Axm\Http\URI;
 use Axm\Exception\AxmException;
-use Axm\Validation;
 
 /**
  * Class Request
@@ -19,10 +18,7 @@ class Request extends URI
 
     private array $routeParams = [];
     protected $headers = [];
-
-    private $_input;
     private $_inputFormat;
-    private $_outputFormat;
 
     /**
      * Tipos de contenido permitidos para la solicitud HTTP.
@@ -34,18 +30,6 @@ class Request extends URI
         'application/json' => 'parseJSON',
         'application/xml'  => 'parseXML',
         'application/x-www-form-urlencoded' => 'parseForm',
-    ];
-
-    /**
-     * Permite definir las salidas disponibles,
-     * de esta manera se puede presentar la misma salida en distintos
-     * formatos a requerimientos del cliente.
-     */
-    protected $_outputType = [
-        'text/xml'         => 'xml',
-        'text/csv'         => 'csv',
-        'application/json' => 'json',
-        'application/xml'  => 'xml',
     ];
 
 
@@ -289,7 +273,7 @@ class Request extends URI
     public function input(string $key = null)
     {
         $data = (object) $this->arrayToObject($this->getBody());
-        return (empty($key)) ? $data : ($data->{$key} ?? throw new AxmException(Axm::t('axm', 'La propiedad "{key}" no existe en los datos de entrada.', ['{key}' => $data->$key ?? $key])));
+        return (empty($key)) ? $data : ($data->{$key} ?? throw new AxmException(Axm::t('axm', 'La propiedad "%s" no existe en los datos de entrada.', [$data->$key ?? $key])));
     }
 
 
@@ -489,38 +473,6 @@ class Request extends URI
 
 
     /**
-     * Retorna los formato aceptados por el cliente ordenados por prioridad
-     * interpretando la header HTTP_ACCEPT.
-     *
-     * @return array
-     */
-    // public function accept()
-    // {
-    //     if ($this->isCLI()) {
-    //         return [];
-    //     }
-
-    //     $acceptedTypes = [];
-    //     $acceptedValues = explode(',', strtolower(str_replace(' ', '', $this->server('HTTP_ACCEPT') ?? '')));
-
-    //     foreach ($acceptedValues as $value) {
-    //         $priority = 1;
-
-    //         if (strpos($value, ';q=')) {
-    //             [$value, $priority] = explode(';q=', $value);
-    //         }
-
-    //         // solo agregar al array si la prioridad es 1
-    //         if ($priority == 1) {
-    //             $acceptedTypes[$value] = $value;
-    //         }
-    //     }
-
-    //     return array_values($acceptedTypes);
-    // }
-
-
-    /**
      * Verifica el método de la petición
      *
      * @param string $method Http method
@@ -592,7 +544,7 @@ class Request extends URI
      */
     protected function getFilteredValue(string $key, array $array, $default = null): mixed
     {
-        $value = isset($array[$key]) ? [$array[$key]] : $array;
+        $value  = isset($array[$key]) ? [$array[$key]] : $array;
         $filter = array_map([$this, 'h'], $value);
 
         return isset($array[$key]) ? ($filter[$key] ?? $default) : $filter;
@@ -617,15 +569,6 @@ class Request extends URI
         }
 
         return $data;
-    }
-
-
-    /**
-     * Devuelve le nombre del formato de salida.
-     */
-    protected function getOutputFormat(array $validOutput): string
-    {
-        return $validOutput[$this->getAcceptTypes()[0] ?? null] ?? 'json';
     }
 
 
@@ -708,7 +651,6 @@ class Request extends URI
     private function init()
     {
         $this->_inputFormat  = $this->getContentType() ?? 'application/json';
-        $this->_outputFormat = $this->getOutputFormat($this->_outputType);
     }
 
 
@@ -824,8 +766,6 @@ class Request extends URI
 
         return $this;
     }
-
-
 
 
     /**

@@ -4,6 +4,7 @@ namespace Axm\Http;
 
 use Axm;
 use Axm\Exception\AxmException;
+use RuntimeException;
 
 /**
  * Class Response
@@ -19,6 +20,27 @@ class Response
 
   private $_httpVersion;
   private $cyclic = 0;
+  private $message;
+
+  protected $allowedMimeTypes = [
+    'text/html'              => ['html', 'htm'],
+    'text/plain'             => ['txt'],
+    'application/json'       => ['json'],
+    'application/xml'        => ['xml'],
+    'text/css'               => ['css'],
+    'application/javascript' => ['js'],
+    'image/jpeg'             => ['jpg', 'jpeg'],
+    'image/png'              => ['png'],
+    'image/gif'              => ['gif']
+  ];
+
+  protected $_outputType = [
+    'text/plain'       => 'text/plain',
+    'text/xml'         => 'text/xml',
+    'text/csv'         => 'text/csv',
+    'application/json' => 'application/json',
+    'application/xml'  => 'application/xml',
+  ];
 
   /**
    * HTTP 1.1 status messages based on code
@@ -26,7 +48,7 @@ class Response
    * @link http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html
    * @type array
    */
-  protected static $http_messages = [
+  protected $http_messages = [
     // Informational 1xx
     100 => 'Continue',
     101 => 'Switching Protocols',
@@ -90,14 +112,10 @@ class Response
   /**
    * 
    */
-  public function setStatusCode(int $code, $message = null)
+  public function setStatusCode(int $code, ?string $message = null): void
   {
     http_response_code($code);
-
-    if (null === $message)
-      return $message = static::getMessageFromCode($code);
-
-    return $this->message = $message;
+    $this->message = $message ?: $this->getMessageFromCode($code);
   }
 
   /**
@@ -155,13 +173,35 @@ class Response
   /**
    * Outputs the given content encoded as JSON string.
    */
-  public static function json(array $content, int $code = 200, string $charset = 'utf-8')
+  public function json($content, $code = 200, $charset = 'utf-8')
   {
-    /*mime type para el contenido*/
+    // Establecer el código de respuesta HTTP
     http_response_code($code);
-    header(sprintf('Content-Type: application/json;charset=%s', $charset));
-    echo json_encode($content);
+
+    // Verificar si el contenido ya es una cadena JSON
+    if (is_string($content)) {
+      // Verificar si la cadena es una representación válida de JSON
+      if (!json_decode($content)) {
+        throw new \InvalidArgumentException('El contenido proporcionado no es una cadena JSON válida.');
+      }
+      // Establecer la cabecera Content-Type
+      header('Content-Type: application/json;charset=' . $charset);
+      // Imprimir la cadena JSON directamente
+      echo $content;
+    } else {
+      // Convertir el contenido a una cadena JSON
+      $jsonContent = json_encode($content);
+      // Verificar si la conversión fue exitosa
+      if ($jsonContent === false) {
+        throw new \RuntimeException('No se pudo convertir el contenido a JSON.');
+      }
+      // Establecer la cabecera Content-Type
+      header('Content-Type: application/json;charset=' . $charset);
+      // Imprimir la cadena JSON
+      echo $jsonContent;
+    }
   }
+
 
   /**
    * Devuelve un JSON.
@@ -174,7 +214,7 @@ class Response
   /**
    * Devuelve un array.
    */
-  public static function toArray(string $content)
+  public function toArray(string $content)
   {
     return (array) json_decode($content);
   }
@@ -190,8 +230,8 @@ class Response
    */
   public function getMessageFromCode($int)
   {
-    if (isset(static::$http_messages[$int]))
-      return static::$http_messages[$int];
+    if (isset($this->http_messages[$int]))
+      return $this->http_messages[$int];
     else
       return null;
   }
@@ -226,12 +266,31 @@ class Response
    *
    * @return int Returns 1, always
    */
-  public function send(string $content = '', int $code = 204, string $mimeType = 'text/plain', string $charset = 'utf-8'): int
+  public function send($content = '', $code = 200, $mimeType = 'text/plain', $charset = 'utf-8')
   {
-    http_response_code($code);
-    \header(sprintf('Content-Type: %s;charset=%s', $mimeType, $charset));
+    // Validar el código de respuesta
+    if (!is_numeric($code) || $code < 100 || $code > 599) {
+      throw new RuntimeException('Invalid HTTP response code');
+    }
 
-    return show($content);
+    // Establecer el código de respuesta
+    http_response_code($code);
+
+    // Establecer los encabezados personalizados
+    $outType = $this->_outputType[$mimeType] ?? null;
+    header(sprintf('Content-Type: %s;charset=%s', $outType, $charset));
+
+    // Enviar el contenido
+    if (is_string($content)) {
+      echo $content . PHP_EOL;
+    } elseif (is_array($content)) {
+      foreach ($content as $value) {
+        echo $value . PHP_EOL;
+      }
+    }
+
+    // Detener la ejecución del script
+    exit();
   }
 
 
@@ -241,7 +300,7 @@ class Response
    * @param int $statusCode el código de estado HTTP de la respuesta
    * @param array $headers un arreglo asociativo de headers (nombre => valor)
    */
-  function setHeader(int $statusCode, array $headers = []): void
+  public function setHeader(int $statusCode, array $headers = []): void
   {
     // Validamos el código de estado
     if ($statusCode < 100 || $statusCode > 599) {
